@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>满屏爱心动画 - 张咪</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            overflow: hidden;
+            background: #000;
+            font-family: Arial, sans-serif;
+        }
+        #name {
+            position: fixed;
+            bottom: 50px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: #FF69B4;
+            font-size: 3em;
+            font-weight: bold;
+            text-shadow: 0 0 10px rgba(255,105,180,0.5);
+            z-index: 2;
+        }
+        canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            z-index: 1;
+        }
+    </style>
+</head>
+<body>
+    <div id="name">张咪</div>
+    <canvas id="heartCanvas"></canvas>
+
+    <script>
+        // ======================
+        // 画布初始化
+        // ======================
+        const canvas = document.getElementById('heartCanvas');
+        const ctx = canvas.getContext('2d');
+        let width = canvas.width = window.innerWidth;
+        let height = canvas.height = window.innerHeight;
+
+        // ======================
+        // 动画参数配置
+        // ======================
+        const config = {
+            heartColor: '#FF69B4',     // 粉色
+            maxHearts: 100,            // 最大爱心数量
+            spawnRate: 30,             // 生成频率（每帧概率）
+            baseSpeed: 0.5,            // 基础移动速度
+            sizeRange: [15, 40]       // 爱心尺寸范围
+        };
+
+        // ======================
+        // 爱心对象池
+        // ======================
+        class Heart {
+            constructor() {
+                this.reset();
+            }
+
+            reset() {
+                this.x = Math.random() * width;
+                this.y = height + 100;
+                this.size = Math.random() * (config.sizeRange[1]-config.sizeRange[0]) + config.sizeRange[0];
+                this.speed = config.baseSpeed + Math.random() * 0.5;
+                this.alpha = 1;
+                this.phase = Math.random() * Math.PI * 2; // 用于波动动画
+            }
+
+            update() {
+                this.y -= this.speed;
+                this.phase += 0.02;
+                this.x += Math.sin(this.phase) * 0.5; // 添加左右摆动
+                this.alpha = Math.min(1, (height - this.y) / 200);
+
+                if (this.y < -100) this.reset();
+            }
+
+            draw() {
+                ctx.save();
+                ctx.translate(this.x, this.y);
+                ctx.scale(0.8 + Math.sin(this.phase) * 0.2, 0.8 + Math.sin(this.phase) * 0.2); // 添加缩放动画
+                ctx.globalAlpha = this.alpha;
+
+                // 绘制爱心形状
+                ctx.beginPath();
+                ctx.moveTo(0, 0);
+                ctx.bezierCurveTo(-20, -20, -40, 15, 0, 40);
+                ctx.bezierCurveTo(40, 15, 20, -20, 0, 0);
+                ctx.fillStyle = config.heartColor;
+                ctx.fill();
+
+                ctx.restore();
+            }
+        }
+
+        // ======================
+        // 动画核心逻辑
+        // ======================
+        const hearts = Array.from({ length: config.maxHearts }, () => new Heart());
+
+        function animate() {
+            ctx.clearRect(0, 0, width, height);
+
+            // 更新并绘制爱心
+            hearts.forEach(heart => {
+                heart.update();
+                heart.draw();
+            });
+
+            // 随机生成新爱心
+            if (Math.random() * 100 < config.spawnRate &&
+                hearts.filter(h => h.y > height).length < config.maxHearts) {
+                hearts.push(new Heart());
+            }
+
+            requestAnimationFrame(animate);
+        }
+
+        // ======================
+        // 窗口尺寸变化处理
+        // ======================
+        window.addEventListener('resize', () => {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight;
+            hearts.forEach(heart => heart.reset());
+        });
+
+        // ======================
+        // 启动动画
+        // ======================
+        animate();
+
+        // ======================
+        // 添加点击互动效果
+        // ======================
+        window.addEventListener('click', (e) => {
+            const heart = new Heart();
+            heart.x = e.clientX;
+            heart.y = e.clientY;
+            hearts.push(heart);
+        });
+    </script>
+</body>
+</html>
